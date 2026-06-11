@@ -1,0 +1,6 @@
+{
+  "name": "Web Development Company Homepage",
+  "description": "A high-performance modern website for a premium web development company. Features an interactive project cost estimator, portfolio showcase filter, testimonial carousel, and robust contact workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
