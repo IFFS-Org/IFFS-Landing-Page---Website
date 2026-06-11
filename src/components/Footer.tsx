@@ -37,7 +37,7 @@ export default function Footer({ onNavigate }: FooterProps) {
                Have a custom scope or specific interface design requirement? Connect with our architectural division:
             </p>
             <div className="text-[11px] font-mono text-white pt-1">
-              hello@iffsolutions.com
+              immanuel.a.fowler@gmail.com
             </div>
           </div>
 

@@ -4,9 +4,13 @@ import { Calendar } from 'lucide-react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Footer from './components/Footer';
+import BookingModal from './components/BookingModal';
 
 export default function App() {
   const [showPopup, setShowPopup] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
+  const bookingUrl = import.meta.env.VITE_BOOKING_URL || '';
 
   // Unified Section Nav helper
   const handleNavigate = (sectionId: string) => {
@@ -28,21 +32,8 @@ export default function App() {
   };
 
   const handleOpenScheduler = () => {
-    const el = document.getElementById('quotes-estimator-block');
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      
-      // Determine if estimator block is currently visible in the active viewport
-      const isInViewport = rect.top < window.innerHeight && rect.bottom > 0;
-
-      if (isInViewport) {
-        // If already looking at it, show the sweet contextual reminder popup
-        setShowPopup(true);
-      } else {
-        // Otherwise, scroll smooth directly to the block
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
+    // Directly open Google Booking modal for scheduling consultation session
+    setShowBookingModal(true);
   };
 
   return (
@@ -52,11 +43,25 @@ export default function App() {
 
       <main className="flex-grow">
         {/* Interactive Hero, Custom Quote Scheduler, and Selected Shaders Portfolio */}
-        <Hero onNavigate={handleNavigate} />
+        <Hero 
+          onNavigate={handleNavigate} 
+          bookingUrl={bookingUrl}
+        />
       </main>
 
       {/* Website bottom sleek creative studio footer */}
       <Footer onNavigate={handleNavigate} />
+
+      {/* Booking Modal Overlay */}
+      <AnimatePresence>
+        {showBookingModal && (
+          <BookingModal
+            isOpen={showBookingModal}
+            onClose={() => setShowBookingModal(false)}
+            bookingUrl={bookingUrl}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Nice, theme-matching popup reminder */}
       <AnimatePresence>
@@ -102,7 +107,7 @@ export default function App() {
                 </div>
                 
                 <p className="text-xs text-zinc-400 font-light leading-relaxed px-1">
-                  You are already viewing the active quote builder. Please <strong className="text-zinc-200 font-semibold">complete the estimator system</strong> to schedule a session, or click <strong className="text-zinc-200 font-semibold">"Skip Estimator"</strong> to browse directly.
+                  You are already viewing the active quote builder. Please <strong className="text-zinc-200 font-semibold">complete the estimator system</strong> to schedule a session, or click <strong className="text-zinc-200 font-semibold">"Skip & Book Directly"</strong> to choose your time slot via Google Calendar.
                 </p>
               </div>
 
@@ -118,11 +123,14 @@ export default function App() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowPopup(false)}
+                  onClick={() => {
+                    setShowPopup(false);
+                    setShowBookingModal(true);
+                  }}
                   className="w-full py-2 bg-transparent hover:bg-zinc-900 border border-zinc-850 text-zinc-405 hover:text-white font-mono text-xs font-bold uppercase tracking-wider rounded-lg transition-colors duration-150 cursor-pointer text-center block"
                   id="btn-skip-estimator"
                 >
-                  Skip Estimator
+                  Skip & Book Directly
                 </button>
               </div>
             </motion.div>

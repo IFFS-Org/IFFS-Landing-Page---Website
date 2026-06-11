@@ -18,11 +18,16 @@ import WireframeGlobe from './WireframeGlobe';
 
 interface HeroProps {
   onNavigate: (sectionId: string) => void;
+  bookingUrl: string;
 }
 
-export default function Hero({ onNavigate }: HeroProps) {
+export default function Hero({ 
+  onNavigate,
+  bookingUrl
+}: HeroProps) {
   // Configured default state transitions
   const [activeTab, setActiveTab] = useState<'saas' | 'ecommerce' | 'brand'>('brand');
+  const [iframeLoading, setIframeLoading] = useState(true);
   const [portfolioTier, setPortfolioTier] = useState<'small' | 'medium' | 'large'>('medium');
   const [ecomTier, setEcomTier] = useState<'fixed' | 'small' | 'medium' | 'large'>('small');
   const [saasTier, setSaasTier] = useState<'small' | 'medium' | 'large'>('medium');
@@ -42,7 +47,10 @@ export default function Hero({ onNavigate }: HeroProps) {
   const [quotesList, setQuotesList] = useState<any[]>([]);
 
   // Selected project details lightbox state
-  const [inspectingProject, setInspectingProject] = useState<string | null>(null);
+
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+
 
   // Initialize and load persistent inquiries
   useEffect(() => {
@@ -116,6 +124,51 @@ export default function Hero({ onNavigate }: HeroProps) {
   const factor = HORIZONS[timelineMode]?.rate || 1.0;
   const finalPrice = Math.round((basePrice + addonsPrice) * factor);
 
+  const specSummaryText = `Client Designation: ${clientName}
+Email: ${clientEmail}
+Project Archetype: ${
+    activeTab === 'brand' 
+      ? `Interactive Brand Portfolio (${portfolioTier.toUpperCase()} TIER)` 
+      : activeTab === 'ecommerce'
+        ? `E-Commerce Portal (${ecomTier === 'fixed' ? 'FIXED PROD' : ecomTier.toUpperCase() + ' DYNAMIC'})`
+        : `Custom SaaS Platform (${saasTier.toUpperCase()} TIER)`
+  }
+Estimate: $${finalPrice.toLocaleString()} USD
+Timeline: ${HORIZONS[timelineMode]?.label}
+Selected Addons: ${
+    [
+      activeTab === 'brand' && videoCount > 0 ? `Video Showcase (${videoCount})` : '',
+      activeTab === 'brand' && interactiveFeatures ? 'Interactive Grids' : '',
+      activeTab === 'ecommerce' && liveOrderService ? 'Live Order Stream' : '',
+      activeTab === 'saas' && screenCount > 0 ? `Screens (${screenCount})` : '',
+      apiIntegration ? 'Custom API Links' : ''
+    ].filter(Boolean).join(', ') || 'None'
+  }
+Remarks: ${notes || 'None specified.'}`;
+
+  const triggerCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const getPrefilledUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('calendly.com')) {
+      try {
+        const urlObj = new URL(url);
+        urlObj.searchParams.set('name', clientName);
+        urlObj.searchParams.set('email', clientEmail);
+        urlObj.searchParams.set('a1', specSummaryText);
+        return urlObj.toString();
+      } catch {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}name=${encodeURIComponent(clientName)}&email=${encodeURIComponent(clientEmail)}&a1=${encodeURIComponent(specSummaryText)}`;
+      }
+    }
+    return url;
+  };
+
   // Submit quote & update database/localStorage journal
   const handleDispatchProposal = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,9 +226,7 @@ export default function Hero({ onNavigate }: HeroProps) {
     }
 
     setIsSubmitted(true);
-    setClientName('');
-    setClientEmail('');
-    setNotes('');
+    setIframeLoading(true);
   };
 
   const handleClearJournal = () => {
@@ -187,36 +238,6 @@ export default function Hero({ onNavigate }: HeroProps) {
     }
   };
 
-  // Design Portfolio showcase variables
-  const CASE_STUDIES = [
-    {
-      id: 'case-1',
-      title: 'Aether Cloud Interface',
-      tag: 'FINTECH SAAS',
-      performance: '99.8%',
-      bundleSize: '42KB',
-      gradient: 'from-zinc-900 to-zinc-800',
-      description: 'High-density numeric dashboard built for enterprise monitoring. Features smooth gray reactive graphs and custom slate layouts.'
-    },
-    {
-      id: 'case-2',
-      title: 'Monolith Gallery',
-      tag: 'E-COMMERCE',
-      performance: '100% Core Web',
-      bundleSize: '24KB',
-      gradient: 'from-zinc-800 via-zinc-900 to-zinc-950',
-      description: 'Creative digital asset store utilizing lightweight web structures and beautiful glass transitions.'
-    },
-    {
-      id: 'case-3',
-      title: 'Zeta Protocol Engine',
-      tag: 'BRAND PLATFORM',
-      performance: '99.4%',
-      bundleSize: '31KB',
-      gradient: 'from-zinc-950 to-zinc-900',
-      description: 'Minimalistic architecture utilizing custom CSS canvas grids, micro-interactions, and pristine typography.'
-    }
-  ];
 
   return (
     <section id="hero" className="w-full bg-zinc-950 min-h-screen text-slate-100 font-sans pb-24 overflow-x-hidden selection:bg-zinc-800 selection:text-white">
@@ -293,14 +314,128 @@ export default function Hero({ onNavigate }: HeroProps) {
                       Estimator System
                     </h3>
                   </div>
-                  <div className="bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-[10px] font-mono text-zinc-400 flex items-center gap-1.5 shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    REALTIME ENGINE
-                  </div>
+                    <div className="bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800 text-[10px] font-mono text-zinc-400 flex items-center gap-1.5 shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      REALTIME ENGINE
+                    </div>
                 </div>
 
-                {/* Main Interactive Form */}
-                <form onSubmit={handleDispatchProposal} className="space-y-5">
+                {/* Main Interactive Form / booking scheduler integration flow */}
+                {isSubmitted ? (
+                  <div className="space-y-5 animate-fadeIn">
+                    {/* Success Alert */}
+                    <div className="p-4 bg-zinc-900 border border-emerald-900/60 rounded-xl space-y-2">
+                      <p className="text-xs font-mono font-bold text-emerald-400">✓ PROPOSAL SAVED & SYNCED</p>
+                      <p className="text-[11px] text-zinc-400 leading-normal">
+                        Choose a time slot for your free consultation session below to review specifications with our lead architect.
+                      </p>
+                    </div>
+
+                    {/* Copy-Paste Specs Helper (only shown for Google Calendar embeds since Calendly handles pre-filling automatically) */}
+                    {!bookingUrl.includes('calendly.com') && (
+                      <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-3">
+                        <div>
+                          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block font-bold">
+                            📋 Google Booking Integration Helper
+                          </span>
+                          <p className="text-[10px] text-zinc-405 leading-normal mt-1 text-zinc-400">
+                            Google Booking does not support automatic form pre-filling. Use the buttons below to quickly copy your specification details and paste them into the Google Calendar booking form fields:
+                          </p>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => triggerCopy(clientName, 'name')}
+                            className={`px-3 py-1.5 border rounded text-[10px] font-mono transition-all flex items-center justify-center cursor-pointer ${
+                              copiedField === 'name' 
+                                ? 'bg-emerald-950 border-emerald-800 text-emerald-400' 
+                                : 'bg-zinc-950 border-zinc-850 hover:border-zinc-700 text-zinc-350 hover:text-white'
+                            }`}
+                          >
+                            {copiedField === 'name' ? '✓ Copied Name' : 'Copy Name'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => triggerCopy(clientEmail, 'email')}
+                            className={`px-3 py-1.5 border rounded text-[10px] font-mono transition-all flex items-center justify-center cursor-pointer ${
+                              copiedField === 'email' 
+                                ? 'bg-emerald-950 border-emerald-800 text-emerald-400' 
+                                : 'bg-zinc-950 border-zinc-850 hover:border-zinc-700 text-zinc-350 hover:text-white'
+                            }`}
+                          >
+                            {copiedField === 'email' ? '✓ Copied Email' : 'Copy Email'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => triggerCopy(specSummaryText, 'specs')}
+                            className={`px-3 py-1.5 border rounded text-[10px] font-mono transition-all flex items-center justify-center cursor-pointer ${
+                              copiedField === 'specs' 
+                                ? 'bg-emerald-950 border-emerald-800 text-emerald-400' 
+                                : 'bg-zinc-950 border-zinc-850 hover:border-zinc-700 text-zinc-350 hover:text-white'
+                            }`}
+                          >
+                            {copiedField === 'specs' ? '✓ Copied Specs' : 'Copy Specs Summary'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Booking Scheduler Iframe Embedded */}
+                    <div className="relative border border-zinc-900 bg-white rounded-xl overflow-hidden h-[480px] shadow-2xl">
+                      {iframeLoading && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 z-10 space-y-4">
+                          <div className="w-6 h-6 border-2 border-zinc-800 border-t-white rounded-full animate-spin" />
+                          <span className="text-[9px] font-mono text-zinc-500 tracking-widest uppercase">Connecting to scheduler...</span>
+                        </div>
+                      )}
+                      
+                      {!bookingUrl || bookingUrl.includes('schedules/...') || bookingUrl.trim() === '' ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950 z-10 p-6 text-center space-y-3">
+                          <AlertCircle className="w-6 h-6 text-zinc-400" />
+                          <h5 className="text-white font-display text-xs font-bold uppercase tracking-wide">Booking URL Setup Required</h5>
+                          <p className="text-[10px] text-zinc-500 font-mono">Set your Booking URL in .env as VITE_BOOKING_URL or click the gear icon above.</p>
+                        </div>
+                      ) : (
+                        <iframe
+                          src={getPrefilledUrl(bookingUrl)}
+                          onLoad={() => setIframeLoading(false)}
+                          className="w-full h-full border-0"
+                          allowFullScreen
+                          title="Inline Booking Calendar Page"
+                        />
+                      )}
+                    </div>
+
+                    {/* Control buttons */}
+                    <div className="flex gap-2.5 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSubmitted(false);
+                          setIframeLoading(true);
+                        }}
+                        className="flex-grow py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-zinc-350 hover:text-white font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center"
+                      >
+                        [ Edit Specifications ]
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSubmitted(false);
+                          setClientName('');
+                          setClientEmail('');
+                          setNotes('');
+                          setIframeLoading(true);
+                        }}
+                        className="py-2.5 px-4 bg-white text-black hover:bg-zinc-200 font-mono text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center"
+                      >
+                        New Spec
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleDispatchProposal} className="space-y-5">
                   {isSubmitted && (
                     <div className="p-4 bg-zinc-900 border border-emerald-800 rounded-xl space-y-2">
                       <p className="text-xs font-mono font-bold text-emerald-400">✓ ESTIMATE JOURNALED SUCCESSFULLY</p>
@@ -696,6 +831,7 @@ export default function Hero({ onNavigate }: HeroProps) {
                     * Interactive budget simulator. Real commission timelines and parameters are locked down during introductory telephone syncs.
                   </p>
                 </form>
+                )}
 
               </div>
             </div>
@@ -718,84 +854,44 @@ export default function Hero({ onNavigate }: HeroProps) {
               Each commission is meticulously structured, utilizing nice grey gradients, pristine typography grid alignments, and high performance scores.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {CASE_STUDIES.map((c) => (
-              <div 
-                key={c.id} 
-                className={`group border border-zinc-900 bg-gradient-to-b ${c.gradient} p-6 rounded-2xl flex flex-col justify-between hover:border-zinc-700 transition-all duration-300 relative overflow-hidden`}
-              >
-                {/* Glowing mesh background for hover state */}
-                <div className="absolute inset-0 bg-radial-gradient from-zinc-700/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-
-                <div className="space-y-4 relative z-10">
-                  <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500">
-                    <span className="tracking-widest uppercase block bg-zinc-950 px-2.5 py-1 rounded border border-zinc-900 text-zinc-400">{c.tag}</span>
-                    <span>SIZE: {c.bundleSize}</span>
+          
+          <div className="grid grid-cols-1">
+            <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 shadow-2xl">
+              <div className="bg-zinc-950/90 rounded-2xl p-8 md:p-12 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+                {/* Radial gradient glow background */}
+                <div className="absolute inset-0 bg-radial-gradient from-zinc-900/40 via-transparent to-transparent pointer-events-none" />
+                
+                <div className="space-y-4 max-w-xl relative z-10">
+                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-[10px] font-mono text-zinc-400 tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    SYSTEM SYNCING // PIPELINE HYDRATION
                   </div>
-
-                  <h3 className="font-display font-bold text-xl text-white group-hover:text-zinc-200 transition-colors">
-                    {c.title}
+                  <h3 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight animate-fadeIn">
+                    Our new public design portfolio is coming soon.
                   </h3>
-
-                  <p className="text-xs text-zinc-400 leading-relaxed font-light">
-                    {c.description}
+                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed font-light font-sans">
+                    We are currently hydrating our database with our latest deployed custom SaaS applications, modern brand portfolios, and high-performance storefronts. All systems are scheduled to launch shortly.
                   </p>
                 </div>
 
-                <div className="pt-6 mt-6 border-t border-zinc-900/60 flex justify-between items-center relative z-10">
-                  <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-500">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>Speed: {c.performance}</span>
-                  </div>
-                  
-                  <button
-                    onClick={() => setInspectingProject(inspectingProject === c.id ? null : c.id)}
-                    className="text-[10px] font-mono font-bold tracking-wider text-white hover:text-zinc-300 uppercase underline cursor-pointer "
-                  >
-                    {inspectingProject === c.id ? '[ Close Specifications ]' : '[ INSPECT SPECS ]'}
-                  </button>
-                </div>
-
-                {/* Inspect specs detailed overlay */}
-                {inspectingProject === c.id && (
-                  <div className="absolute inset-0 bg-zinc-950 p-6 z-20 flex flex-col justify-between animate-fadeIn border border-zinc-800 rounded-2xl font-mono text-[11px] leading-relaxed">
-                    <div className="space-y-3 text-zinc-400">
-                      <div className="flex justify-between text-[10px] text-zinc-500 uppercase border-b border-zinc-900 pb-1.5">
-                        <span>SYSTEM SPEC SHEET</span>
-                        <span className="text-white font-bold">{c.title}</span>
-                      </div>
-                      
-                      <div>
-                        <strong className="text-white"><span className="text-emerald-500/80 font-bold mr-1">//</span>RENDERING PIPELINE:</strong>
-                        <p className="text-zinc-400 mt-0.5">High-efficiency layout nodes, optimized vector packages, absolute styling grids.</p>
-                      </div>
-
-                      <div>
-                        <strong className="text-white"><span className="text-emerald-500/80 font-bold mr-1">//</span>OPTIMAL LOAD PROFILE:</strong>
-                        <div className="grid grid-cols-2 gap-2 mt-1 bg-zinc-900 p-2 rounded border border-zinc-850 text-[10px]">
-                          <span>JS Bndl: {c.bundleSize}</span>
-                          <span>FID Check: &lt;1.2ms</span>
-                          <span>CLS Score: 0.00</span>
-                          <span>TBT Run: 0.05ms</span>
-                        </div>
-                      </div>
-
-                      <p className="text-[10px] text-zinc-500 italic mt-2">
-                        Designed with modern zinc and metallic steel grays to emulate pristine technical blueprinting.
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => setInspectingProject(null)}
-                      className="w-full mt-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-[10px] text-white font-bold uppercase rounded border border-zinc-800 cursor-pointer text-center"
+                <div className="shrink-0 relative z-10 w-full md:w-auto">
+                  <div className="p-6 bg-zinc-900/50 border border-zinc-850 rounded-xl space-y-4 text-center md:text-left max-w-xs mx-auto">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block font-bold">
+                      Need references?
+                    </span>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                      If you require immediate references or case study documentations, our team can deliver developer logs directly to your inbox.
+                    </p>
+                    <a
+                      href="mailto:hello@iffsolutions.com"
+                      className="inline-flex items-center justify-center w-full py-2 px-4 bg-white hover:bg-zinc-200 text-black text-xs font-mono font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer text-center block"
                     >
-                      Return to Gallery
-                    </button>
+                      Request Case Studies
+                    </a>
                   </div>
-                )}
+                </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
 
